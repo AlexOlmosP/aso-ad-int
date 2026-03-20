@@ -1,5 +1,7 @@
 "use client";
 
+import { useRef, useEffect } from "react";
+import gsap from "gsap";
 import { useStore } from "@/lib/store";
 import { COUNTRIES } from "@/lib/countries";
 import { AdvertiserIdPanel } from "./AdvertiserIdPanel";
@@ -22,25 +24,47 @@ export function Header() {
   } = useStore();
 
   const app = trackedApps.find((a) => a.id === selectedAppId);
+  const pillRef = useRef<HTMLDivElement>(null);
+  const appInfoRef = useRef<HTMLDivElement>(null);
+
+  // Animated store switcher pill
+  useEffect(() => {
+    if (!pillRef.current) return;
+    const offset = selectedStore === "appstore" ? 0 : 50;
+    gsap.to(pillRef.current, {
+      left: `${offset}%`,
+      duration: 0.25,
+      ease: "power2.out",
+    });
+  }, [selectedStore]);
+
+  // App info entrance animation
+  useEffect(() => {
+    if (!appInfoRef.current || !app) return;
+    gsap.fromTo(appInfoRef.current,
+      { opacity: 0, x: -8 },
+      { opacity: 1, x: 0, duration: 0.3, ease: "power2.out" }
+    );
+  }, [selectedAppId, app]);
 
   return (
-    <header className="min-h-16 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-[#1a1a1a] flex items-center justify-between px-8 py-2 shrink-0 gap-4 flex-wrap">
+    <header className="min-h-16 glass-subtle border-b border-slate-200/60 dark:border-white/[0.04] flex items-center justify-between px-8 py-2 shrink-0 gap-4 flex-wrap">
       <div className="flex items-center gap-4">
         {app ? (
-          <div className="flex items-center gap-3">
+          <div ref={appInfoRef} className="flex items-center gap-3">
             {app.icon ? (
               <img
                 src={app.icon}
                 alt={app.name}
-                className="size-10 rounded-xl object-cover"
+                className="size-10 rounded-xl object-cover ring-1 ring-black/5 dark:ring-white/10"
               />
             ) : (
-              <div className="size-10 bg-[#ec5b13] rounded-xl flex items-center justify-center text-white font-bold">
+              <div className="size-10 bg-[#ec5b13] rounded-xl flex items-center justify-center text-white font-bold glow-primary">
                 {app.name[0]}
               </div>
             )}
             <div>
-              <h1 className="text-lg font-bold leading-none text-slate-900 dark:text-white">
+              <h1 className="text-lg heading-lg leading-none text-slate-900 dark:text-white">
                 {app.name}
               </h1>
               <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-1">
@@ -50,13 +74,13 @@ export function Header() {
           </div>
         ) : (
           <div className="flex items-center gap-3">
-            <div className="size-10 bg-slate-200 dark:bg-slate-800 rounded-xl flex items-center justify-center">
+            <div className="size-10 bg-slate-100 dark:bg-white/[0.06] rounded-xl flex items-center justify-center">
               <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
               </svg>
             </div>
             <div>
-              <h1 className="text-lg font-bold leading-none text-slate-400">
+              <h1 className="text-lg heading-lg leading-none text-slate-400">
                 Select an app
               </h1>
               <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-1">
@@ -69,13 +93,18 @@ export function Header() {
         {/* Advertiser IDs button (only in Ad Intel mode) */}
         {app && activeTool === "ad-intel" && <AdvertiserIdPanel />}
 
-        {/* Store switcher */}
-        <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg ml-4">
+        {/* Store switcher with animated pill */}
+        <div className="relative flex bg-slate-100/80 dark:bg-white/[0.06] p-1 rounded-lg ml-4">
+          <div
+            ref={pillRef}
+            className="absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white dark:bg-white/[0.12] rounded-md shadow-sm pointer-events-none transition-none"
+            style={{ left: selectedStore === "appstore" ? "4px" : "50%" }}
+          />
           <button
             onClick={() => setSelectedStore("appstore")}
-            className={`px-4 py-1.5 text-xs font-semibold rounded-md flex items-center gap-1.5 transition-all ${
+            className={`relative z-10 px-4 py-1.5 text-xs font-semibold rounded-md flex items-center gap-1.5 transition-colors ${
               selectedStore === "appstore"
-                ? "bg-white dark:bg-slate-700 shadow-sm font-bold text-slate-900 dark:text-white"
+                ? "text-slate-900 dark:text-white"
                 : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
             }`}
           >
@@ -86,9 +115,9 @@ export function Header() {
           </button>
           <button
             onClick={() => setSelectedStore("playstore")}
-            className={`px-4 py-1.5 text-xs font-semibold rounded-md flex items-center gap-1.5 transition-all ${
+            className={`relative z-10 px-4 py-1.5 text-xs font-semibold rounded-md flex items-center gap-1.5 transition-colors ${
               selectedStore === "playstore"
-                ? "bg-white dark:bg-slate-700 shadow-sm font-bold text-slate-900 dark:text-white"
+                ? "text-slate-900 dark:text-white"
                 : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
             }`}
           >
@@ -107,7 +136,7 @@ export function Header() {
             <select
               value={adFormat}
               onChange={(e) => setAdFormat(e.target.value as typeof adFormat)}
-              className="appearance-none px-4 py-2 bg-slate-100 dark:bg-slate-800 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-[#ec5b13] cursor-pointer text-slate-900 dark:text-white"
+              className="appearance-none px-4 py-2 bg-slate-100/80 dark:bg-white/[0.06] border border-transparent rounded-xl text-sm font-medium focus-glow cursor-pointer text-slate-900 dark:text-white"
             >
               <option value="all">All Formats</option>
               <option value="video">Video</option>
@@ -117,8 +146,7 @@ export function Header() {
             </select>
 
             {/* Date range filter */}
-            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl px-3 py-1.5">
-              {/* Date presets */}
+            <div className="flex items-center gap-1.5 bg-slate-100/80 dark:bg-white/[0.06] rounded-xl px-3 py-1.5 border border-transparent">
               {[7, 30].map((days) => (
                 <button
                   key={days}
@@ -134,7 +162,7 @@ export function Header() {
                   {days}d
                 </button>
               ))}
-              <span className="text-slate-300 mx-0.5">|</span>
+              <span className="text-slate-300 dark:text-slate-600 mx-0.5">|</span>
               <svg className="w-4 h-4 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
@@ -156,7 +184,7 @@ export function Header() {
               {(adDateStart || adDateEnd) && (
                 <button
                   onClick={() => { setAdDateStart(""); setAdDateEnd(""); }}
-                  className="text-slate-400 hover:text-red-400 ml-1"
+                  className="text-slate-400 hover:text-red-400 ml-1 transition-colors"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -172,7 +200,7 @@ export function Header() {
           <select
             value={selectedCountry}
             onChange={(e) => setSelectedCountry(e.target.value)}
-            className="appearance-none pl-9 pr-8 py-2 bg-slate-100 dark:bg-slate-800 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-[#ec5b13] cursor-pointer w-44 text-slate-900 dark:text-white"
+            className="appearance-none pl-9 pr-8 py-2 bg-slate-100/80 dark:bg-white/[0.06] border border-transparent rounded-xl text-sm font-medium focus-glow cursor-pointer w-44 text-slate-900 dark:text-white"
           >
             {COUNTRIES.map((c) => (
               <option key={c.code} value={c.code}>

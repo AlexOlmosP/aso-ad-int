@@ -8,6 +8,22 @@
   --color-accent-blue: #3b82f6;
 }
 
+/* ─── Design Tokens ─── */
+:root {
+  --glass-bg: rgba(255, 255, 255, 0.65);
+  --glass-border: rgba(0, 0, 0, 0.06);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.04);
+  --glow-primary: rgba(236, 91, 19, 0.2);
+  --glow-blue: rgba(59, 130, 246, 0.2);
+  --glow-green: rgba(34, 197, 94, 0.2);
+}
+
+.dark {
+  --glass-bg: rgba(15, 23, 42, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.06);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
 @font-face {
   font-family: "Public Sans";
   font-style: normal;
@@ -19,23 +35,147 @@
 
 body {
   font-family: "Public Sans", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+/* ─── Glass Effects ─── */
+.glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.glass-hover {
+  transition: all 0.2s ease;
+}
+.glass-hover:hover {
+  box-shadow: var(--glass-shadow), 0 0 0 1px var(--glass-border);
+  transform: translateY(-1px);
+}
+
+.glass-subtle {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* ─── Premium Button ─── */
 .premium-btn {
   background: linear-gradient(180deg, #ec5b13 0%, #d44d0b 100%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    0 2px 4px rgba(0, 0, 0, 0.1);
+    0 2px 4px rgba(0, 0, 0, 0.1),
+    0 0 0 0 rgba(236, 91, 19, 0);
+  transition: box-shadow 0.2s ease, transform 0.1s ease;
+}
+.premium-btn:hover {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 4px 12px rgba(236, 91, 19, 0.3),
+    0 0 20px rgba(236, 91, 19, 0.15);
 }
 .premium-btn:active {
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
   transform: translateY(1px);
 }
+
+/* ─── Shadows ─── */
 .card-shadow {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05),
-    0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04),
+    0 4px 12px rgba(0, 0, 0, 0.06),
+    0 8px 24px rgba(0, 0, 0, 0.04);
 }
 
-/* Scrollbar styling */
+.card-shadow-hover {
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+.card-shadow-hover:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06),
+    0 8px 24px rgba(0, 0, 0, 0.1),
+    0 16px 48px rgba(0, 0, 0, 0.06);
+  transform: translateY(-2px);
+}
+
+/* ─── Glow Utilities ─── */
+.glow-primary {
+  box-shadow: 0 0 20px var(--glow-primary), 0 0 60px rgba(236, 91, 19, 0.08);
+}
+.glow-blue {
+  box-shadow: 0 0 20px var(--glow-blue);
+}
+.glow-green {
+  box-shadow: 0 0 20px var(--glow-green);
+}
+
+/* ─── Typography ─── */
+.heading-xl {
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+
+.heading-lg {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.mono {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Shimmer Skeleton ─── */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.04) 0%,
+    rgba(0, 0, 0, 0.08) 50%,
+    rgba(0, 0, 0, 0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+.dark .skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.03) 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.03) 100%
+  );
+  background-size: 200% 100%;
+}
+
+/* ─── Ambient Grain ─── */
+.grain::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  opacity: 0.012;
+  pointer-events: none;
+  z-index: 9999;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ─── Fade Gradient for Scroll Edges ─── */
+.scroll-fade-right {
+  mask-image: linear-gradient(to right, black 90%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black 90%, transparent 100%);
+}
+
+/* ─── Focus Ring ─── */
+.focus-glow:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(236, 91, 19, 0.3), 0 0 12px rgba(236, 91, 19, 0.15);
+}
+
+/* ─── Scrollbar Styling ─── */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;

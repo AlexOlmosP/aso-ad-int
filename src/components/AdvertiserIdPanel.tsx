@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import gsap from "gsap";
 import { useStore } from "@/lib/store";
 import type { AdNetwork } from "@/lib/types";
 
@@ -57,6 +58,7 @@ export function AdvertiserIdPanel() {
   const [open, setOpen] = useState(false);
   const [values, setValues] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const modalRef = useRef<HTMLDivElement>(null);
 
   const app = trackedApps.find((a) => a.id === selectedAppId);
   if (!app) return null;
@@ -101,10 +103,10 @@ export function AdvertiserIdPanel() {
     return (
       <button
         onClick={handleOpen}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
           hasAnyId
-            ? "bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800/30"
-            : "bg-orange-50 text-[#ec5b13] border border-orange-200 hover:bg-orange-100 dark:bg-orange-900/20 dark:border-orange-800/30"
+            ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800/30 shadow-[0_0_12px_rgba(34,197,94,0.1)]"
+            : "bg-orange-50 text-[#ec5b13] border border-orange-200/60 hover:bg-orange-100 dark:bg-orange-900/20 dark:border-orange-800/30 shadow-[0_0_12px_rgba(236,91,19,0.08)]"
         }`}
       >
         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -116,12 +118,50 @@ export function AdvertiserIdPanel() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setOpen(false)}>
+    <AdvertiserModal
+      app={app}
+      values={values}
+      setValues={setValues}
+      errors={errors}
+      onSave={handleSave}
+      onClose={() => setOpen(false)}
+    />
+  );
+}
+
+function AdvertiserModal({
+  app,
+  values,
+  setValues,
+  errors,
+  onSave,
+  onClose,
+}: {
+  app: { name: string };
+  values: Record<string, string>;
+  setValues: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  errors: Record<string, string>;
+  onSave: () => void;
+  onClose: () => void;
+}) {
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!modalRef.current) return;
+    gsap.fromTo(modalRef.current,
+      { scale: 0.95, opacity: 0, y: 10 },
+      { scale: 1, opacity: 1, y: 0, duration: 0.3, ease: "back.out(1.5)" }
+    );
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md" onClick={onClose}>
       <div
-        className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6"
+        ref={modalRef}
+        className="w-full max-w-lg bg-white/95 dark:bg-slate-900/95 rounded-2xl shadow-2xl border border-slate-200/60 dark:border-white/[0.06] p-6 backdrop-blur-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
+        <h3 className="text-lg heading-lg text-slate-900 dark:text-white mb-1">
           Advertiser IDs — {app.name}
         </h3>
         <p className="text-xs text-slate-500 mb-5">
@@ -136,7 +176,7 @@ export function AdvertiserIdPanel() {
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-2">
                     <div
-                      className="size-5 rounded flex items-center justify-center text-[9px] font-bold text-white"
+                      className="size-5 rounded-md flex items-center justify-center text-[9px] font-bold text-white shadow-sm"
                       style={{ backgroundColor: config.color }}
                     >
                       {config.icon}
@@ -165,7 +205,7 @@ export function AdvertiserIdPanel() {
                     }))
                   }
                   placeholder={config.placeholder}
-                  className="w-full h-9 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-mono text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#ec5b13]/30 focus:border-[#ec5b13]"
+                  className="w-full h-9 px-3 rounded-xl border border-slate-200/60 dark:border-white/[0.06] bg-slate-50/80 dark:bg-white/[0.04] text-sm font-mono text-slate-900 dark:text-white placeholder:text-slate-400 focus-glow"
                 />
                 {errors[config.field] && (
                   <p className="text-[10px] text-red-500 mt-0.5">
@@ -179,14 +219,14 @@ export function AdvertiserIdPanel() {
 
         <div className="flex justify-end gap-2 mt-6">
           <button
-            onClick={() => setOpen(false)}
-            className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors"
           >
             Cancel
           </button>
           <button
-            onClick={handleSave}
-            className="px-5 py-2 bg-[#ec5b13] text-white text-sm font-bold rounded-xl hover:opacity-90 transition-opacity"
+            onClick={onSave}
+            className="px-5 py-2 bg-[#ec5b13] text-white text-sm font-bold rounded-xl premium-btn transition-all"
           >
             Save IDs
           </button>

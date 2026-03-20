@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import gsap from "gsap";
 import { useStore } from "@/lib/store";
 
 interface AppEvent {
@@ -34,7 +35,7 @@ function toYouTubeEmbed(url: string): string {
   } else if (url.includes("youtu.be/")) {
     videoId = url.split("youtu.be/")[1]?.split("?")[0] ?? "";
   } else if (url.includes("/embed/")) {
-    return url; // Already an embed URL
+    return url;
   }
   return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
 }
@@ -45,6 +46,8 @@ export function StoreListingView() {
   const [listing, setListing] = useState<StoreListingData | null>(null);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
+  const screenshotsRef = useRef<HTMLDivElement>(null);
 
   const selectedApp = trackedApps.find((a) => a.id === selectedAppId);
   const appId =
@@ -74,16 +77,29 @@ export function StoreListingView() {
     fetchListing();
   }, [fetchListing]);
 
+  // Screenshot staggered entrance
+  useEffect(() => {
+    if (!screenshotsRef.current || !listing?.screenshots.length) return;
+    gsap.fromTo(
+      screenshotsRef.current.querySelectorAll("img"),
+      { opacity: 0, scale: 0.95, y: 8 },
+      { opacity: 1, scale: 1, y: 0, duration: 0.35, stagger: 0.05, ease: "power2.out" }
+    );
+  }, [listing?.screenshots.length]);
+
   if (!appId) return null;
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 card-shadow p-8">
-        <div className="flex items-center gap-3">
-          <div className="animate-spin rounded-full h-5 w-5 border-2 border-[#ec5b13] border-t-transparent" />
-          <span className="text-sm text-slate-400">
-            Loading store listing...
-          </span>
+      <div className="bg-white/80 dark:bg-slate-900/80 rounded-2xl border border-slate-200/60 dark:border-white/[0.06] card-shadow p-8 backdrop-blur-sm">
+        <div className="space-y-4">
+          <div className="h-6 w-48 rounded-lg skeleton-shimmer" />
+          <div className="h-4 w-72 rounded skeleton-shimmer" />
+          <div className="flex gap-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-52 w-28 rounded-xl skeleton-shimmer flex-shrink-0" />
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -92,27 +108,26 @@ export function StoreListingView() {
   if (!listing) return null;
 
   return (
-    <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 card-shadow overflow-hidden">
-      <div className="p-6 border-b border-slate-100 dark:border-slate-800">
+    <section ref={sectionRef} className="bg-white/80 dark:bg-slate-900/80 rounded-2xl border border-slate-200/60 dark:border-white/[0.06] card-shadow overflow-hidden backdrop-blur-sm">
+      <div className="p-6 border-b border-slate-100/80 dark:border-white/[0.04]">
         <div className="flex items-center justify-between">
-          <h3 className="font-bold text-lg text-slate-900 dark:text-white">
+          <h3 className="heading-lg text-lg text-slate-900 dark:text-white">
             Store Listing Overview
           </h3>
           <div className="flex items-center gap-2">
             {listing.rating && (
-              <span className="text-xs font-bold text-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 px-2 py-0.5 rounded">
+              <span className="text-xs font-bold text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 px-2.5 py-1 rounded-lg border border-yellow-100 dark:border-yellow-800/30">
                 {listing.rating.toFixed(1)} stars
               </span>
             )}
             {listing.installs && (
-              <span className="text-xs font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+              <span className="text-xs font-bold text-slate-500 bg-slate-100/80 dark:bg-white/[0.06] px-2.5 py-1 rounded-lg border border-slate-200/60 dark:border-white/[0.04] mono">
                 {listing.installs} installs
               </span>
             )}
           </div>
         </div>
 
-        {/* Subtitle / Short description */}
         {listing.subtitle && (
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
             {listing.subtitle}
@@ -123,41 +138,43 @@ export function StoreListingView() {
       {/* App Preview / Trailer video */}
       {listing.video && (
         <div className="px-6 pt-4">
-          <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
             {selectedStore === "appstore" ? "App Preview" : "Trailer"}
           </h4>
-          {isYouTubeUrl(listing.video) ? (
-            <iframe
-              src={toYouTubeEmbed(listing.video)}
-              allow="autoplay; encrypted-media"
-              allowFullScreen
-              className="w-full aspect-video rounded-xl bg-black"
-            />
-          ) : (
-            <video
-              src={listing.video}
-              controls
-              muted
-              playsInline
-              className="w-full max-h-64 rounded-xl bg-black object-contain"
-            />
-          )}
+          <div className="rounded-xl overflow-hidden ring-1 ring-black/5 dark:ring-white/5">
+            {isYouTubeUrl(listing.video) ? (
+              <iframe
+                src={toYouTubeEmbed(listing.video)}
+                allow="autoplay; encrypted-media"
+                allowFullScreen
+                className="w-full aspect-video bg-black"
+              />
+            ) : (
+              <video
+                src={listing.video}
+                controls
+                muted
+                playsInline
+                className="w-full max-h-64 bg-black object-contain"
+              />
+            )}
+          </div>
         </div>
       )}
 
       {/* Screenshots */}
       {listing.screenshots.length > 0 && (
         <div className="px-6 pt-4">
-          <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
             Screenshots
           </h4>
-          <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
+          <div ref={screenshotsRef} className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scroll-fade-right">
             {listing.screenshots.map((url, i) => (
               <img
                 key={i}
                 src={url}
                 alt={`Screenshot ${i + 1}`}
-                className="h-52 rounded-xl flex-shrink-0 border border-slate-200 dark:border-slate-700"
+                className="h-52 rounded-xl flex-shrink-0 border border-slate-200/60 dark:border-white/[0.06] hover:scale-[1.02] transition-transform cursor-pointer"
                 loading="lazy"
               />
             ))}
@@ -168,14 +185,14 @@ export function StoreListingView() {
       {/* App Events */}
       {listing.events && listing.events.length > 0 && (
         <div className="px-6 pt-4">
-          <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
             Events
           </h4>
-          <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
+          <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scroll-fade-right">
             {listing.events.map((event, i) => (
               <div
                 key={i}
-                className="min-w-[220px] max-w-[220px] bg-slate-50 dark:bg-slate-800 rounded-xl overflow-hidden flex-shrink-0 border border-slate-200 dark:border-slate-700"
+                className="min-w-[220px] max-w-[220px] bg-white/60 dark:bg-white/[0.03] rounded-xl overflow-hidden flex-shrink-0 border border-slate-200/60 dark:border-white/[0.06] card-shadow-hover"
               >
                 {event.imageUrl && (
                   <img
@@ -187,7 +204,7 @@ export function StoreListingView() {
                 )}
                 <div className="p-3">
                   {event.badge && (
-                    <span className="text-[10px] font-bold text-[#ec5b13] bg-orange-50 dark:bg-orange-900/20 px-1.5 py-0.5 rounded mb-1 inline-block">
+                    <span className="text-[10px] font-bold text-[#ec5b13] bg-orange-50 dark:bg-orange-900/20 px-1.5 py-0.5 rounded-md mb-1 inline-block border border-orange-100 dark:border-orange-800/30">
                       {event.badge}
                     </span>
                   )}
@@ -208,7 +225,7 @@ export function StoreListingView() {
 
       {/* Description */}
       <div className="p-6">
-        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
           Description
         </h4>
         <div className="relative">
