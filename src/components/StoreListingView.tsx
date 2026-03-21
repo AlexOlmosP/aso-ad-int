@@ -91,7 +91,7 @@ export function StoreListingView() {
 
   if (loading) {
     return (
-      <div className="bg-white/80 dark:bg-slate-900/80 rounded-2xl border border-slate-200/60 dark:border-white/[0.06] card-shadow p-8 backdrop-blur-sm">
+      <div className="bg-white/80 dark:bg-slate-900/80 rounded-[2rem] border border-slate-200/60 dark:border-white/[0.06] card-shadow p-8 backdrop-blur-sm">
         <div className="space-y-4">
           <div className="h-6 w-48 rounded-lg skeleton-shimmer" />
           <div className="h-4 w-72 rounded skeleton-shimmer" />
@@ -108,7 +108,7 @@ export function StoreListingView() {
   if (!listing) return null;
 
   return (
-    <section ref={sectionRef} className="bg-white/80 dark:bg-slate-900/80 rounded-2xl border border-slate-200/60 dark:border-white/[0.06] card-shadow overflow-hidden backdrop-blur-sm">
+    <section ref={sectionRef} className="bg-white/80 dark:bg-slate-900/80 rounded-[2rem] border border-slate-200/60 dark:border-white/[0.06] card-shadow overflow-hidden backdrop-blur-sm">
       <div className="p-6 border-b border-slate-100/80 dark:border-white/[0.04]">
         <div className="flex items-center justify-between">
           <h3 className="heading-lg text-lg text-slate-900 dark:text-white">

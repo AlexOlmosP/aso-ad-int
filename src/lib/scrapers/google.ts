@@ -11,19 +11,23 @@ interface GoogleScrapeParams {
 async function screenshotCreative(context: BrowserContext, previewUrl: string): Promise<string> {
   const page = await context.newPage();
   try {
+    // Use a proper viewport so ads render at their real size
+    await page.setViewportSize({ width: 640, height: 480 });
+
     const url = new URL(previewUrl);
     const containerId = url.searchParams.get("htmlParentId") || "ad-container";
     const callback = url.searchParams.get("responseCallback") || "cb";
 
     await page.setContent(`<!DOCTYPE html>
-<html><head><style>*{margin:0;padding:0}body{background:#f1f5f9;width:280px;height:192px;overflow:hidden;display:flex;align-items:center;justify-content:center}
-#${containerId}{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
-#${containerId} *{max-width:100%!important;max-height:100%!important}</style></head>
+<html><head><style>*{margin:0;padding:0;box-sizing:border-box}
+body{background:#f1f5f9;width:100vw;height:100vh;overflow:hidden;display:flex;align-items:center;justify-content:center}
+#${containerId}{width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden}
+</style></head>
 <body><div id="${containerId}"></div>
 <script>window["${callback}"]=function(){};</script>
 <script src="${previewUrl}"></script></body></html>`);
     await page.waitForTimeout(4000);
-    const buf = await page.screenshot({ type: "jpeg", quality: 75 });
+    const buf = await page.screenshot({ type: "jpeg", quality: 80 });
     return "data:image/jpeg;base64," + buf.toString("base64");
   } catch (err) {
     console.log("[Google] Screenshot failed:", err);

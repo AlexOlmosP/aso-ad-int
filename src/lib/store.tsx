@@ -13,6 +13,9 @@ import type {
   TrackedApp,
   AdvertiserIds,
   Keyword,
+  KeywordSuggestion,
+  AsoAuditResult,
+  CroSuggestion,
   AdCreative,
   AdNetwork,
   ActiveTool,
@@ -31,10 +34,16 @@ interface StoreContextValue {
   adDateStart: string;
   adDateEnd: string;
   keywords: Keyword[];
+  keywordSuggestions: KeywordSuggestion[];
+  asoAudit: AsoAuditResult | null;
+  croSuggestions: CroSuggestion[];
   ads: Record<AdNetwork, AdCreative[]>;
   loading: {
     search: boolean;
     keywords: boolean;
+    keywordSuggestions: boolean;
+    asoAudit: boolean;
+    croSuggestions: boolean;
     ads: Record<AdNetwork, boolean>;
   };
 
@@ -55,6 +64,9 @@ interface StoreContextValue {
   fetchAds: (network: AdNetwork) => Promise<void>;
   fetchAllAds: () => Promise<void>;
   searchApps: (query: string) => Promise<AppSearchResult[]>;
+  fetchKeywordSuggestions: () => Promise<void>;
+  fetchAsoAudit: () => Promise<void>;
+  fetchCroSuggestions: () => Promise<void>;
 }
 
 const StoreContext = createContext<StoreContextValue | null>(null);
@@ -69,6 +81,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [adDateStart, setAdDateStart] = useState("");
   const [adDateEnd, setAdDateEnd] = useState("");
   const [keywords, setKeywords] = useState<Keyword[]>([]);
+  const [keywordSuggestions, setKeywordSuggestions] = useState<KeywordSuggestion[]>([]);
+  const [asoAudit, setAsoAudit] = useState<AsoAuditResult | null>(null);
+  const [croSuggestions, setCroSuggestions] = useState<CroSuggestion[]>([]);
   const [ads, setAds] = useState<Record<AdNetwork, AdCreative[]>>({
     meta: [],
     google: [],
@@ -77,6 +92,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState({
     search: false,
     keywords: false,
+    keywordSuggestions: false,
+    asoAudit: false,
+    croSuggestions: false,
     ads: { meta: false, google: false, tiktok: false },
   });
 
@@ -348,6 +366,83 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     ]);
   }, [fetchAds]);
 
+  const fetchKeywordSuggestions = useCallback(async () => {
+    if (!selectedApp) return;
+    const appId = selectedStore === "appstore" ? selectedApp.appStoreId : selectedApp.playStoreId;
+    if (!appId) return;
+    setLoading((l) => ({ ...l, keywordSuggestions: true }));
+    try {
+      const res = await fetch("/api/aso/keyword-suggestions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          appId,
+          store: selectedStore,
+          country: selectedCountry === "ALL" ? "US" : selectedCountry,
+          appName: selectedApp.name,
+          developer: selectedApp.developer,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to fetch suggestions");
+      const data = await res.json();
+      setKeywordSuggestions(data.suggestions ?? []);
+    } catch {
+      setKeywordSuggestions([]);
+    } finally {
+      setLoading((l) => ({ ...l, keywordSuggestions: false }));
+    }
+  }, [selectedApp, selectedStore, selectedCountry]);
+
+  const fetchAsoAudit = useCallback(async () => {
+    if (!selectedApp) return;
+    const appId = selectedStore === "appstore" ? selectedApp.appStoreId : selectedApp.playStoreId;
+    if (!appId) return;
+    setLoading((l) => ({ ...l, asoAudit: true }));
+    try {
+      const res = await fetch("/api/aso/audit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          appId,
+          store: selectedStore,
+          country: selectedCountry === "ALL" ? "US" : selectedCountry,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to fetch audit");
+      const data = await res.json();
+      setAsoAudit(data);
+    } catch {
+      setAsoAudit(null);
+    } finally {
+      setLoading((l) => ({ ...l, asoAudit: false }));
+    }
+  }, [selectedApp, selectedStore, selectedCountry]);
+
+  const fetchCroSuggestions = useCallback(async () => {
+    if (!selectedApp) return;
+    const appId = selectedStore === "appstore" ? selectedApp.appStoreId : selectedApp.playStoreId;
+    if (!appId) return;
+    setLoading((l) => ({ ...l, croSuggestions: true }));
+    try {
+      const res = await fetch("/api/aso/cro-suggestions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          appId,
+          store: selectedStore,
+          country: selectedCountry === "ALL" ? "US" : selectedCountry,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to fetch CRO suggestions");
+      const data = await res.json();
+      setCroSuggestions(data.suggestions ?? []);
+    } catch {
+      setCroSuggestions([]);
+    } finally {
+      setLoading((l) => ({ ...l, croSuggestions: false }));
+    }
+  }, [selectedApp, selectedStore, selectedCountry]);
+
   return (
     <StoreContext.Provider
       value={{
@@ -360,6 +455,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         adDateStart,
         adDateEnd,
         keywords,
+        keywordSuggestions,
+        asoAudit,
+        croSuggestions,
         ads,
         loading,
         setActiveTool,
@@ -378,6 +476,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         fetchAds,
         fetchAllAds,
         searchApps,
+        fetchKeywordSuggestions,
+        fetchAsoAudit,
+        fetchCroSuggestions,
       }}
     >
       {children}

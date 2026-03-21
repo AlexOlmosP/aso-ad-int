@@ -77,7 +77,7 @@ export function AppSearchModal({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md" onClick={onClose}>
       <div
         ref={modalRef}
-        className="bg-white/95 dark:bg-slate-900/95 rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[80vh] flex flex-col border border-slate-200/60 dark:border-white/[0.06] backdrop-blur-xl"
+        className="bg-white/95 dark:bg-slate-900/95 rounded-[2rem] shadow-2xl w-full max-w-lg mx-4 max-h-[80vh] flex flex-col border border-slate-200/60 dark:border-white/[0.06] backdrop-blur-xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

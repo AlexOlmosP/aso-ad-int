@@ -28,6 +28,33 @@ export interface Keyword {
   rank: number | null;        // position in search results (null = not in top 100)
 }
 
+// ── ASO Analysis types ─────────────────────────────────────
+export interface KeywordSuggestion {
+  term: string;
+  estimatedVolume: number;
+  difficulty: "low" | "medium" | "high";
+  source: "autocomplete" | "competitor" | "semantic" | "google-search";
+}
+
+export interface AsoAuditFactor {
+  name: string;
+  score: number;
+  maxScore: number;
+  tips: string[];
+}
+
+export interface AsoAuditResult {
+  overallScore: number;
+  factors: AsoAuditFactor[];
+}
+
+export interface CroSuggestion {
+  element: string;
+  priority: "high" | "medium" | "low";
+  currentState: string;
+  recommendation: string;
+}
+
 // ── Ad Intelligence types ──────────────────────────────────
 export type AdNetwork = "meta" | "google" | "tiktok";
 
@@ -64,7 +91,7 @@ export interface AppSearchResult {
 }
 
 // ── Store state ────────────────────────────────────────────
-export type ActiveTool = "ad-intel" | "aso";
+export type ActiveTool = "ad-intel" | "aso-keywords" | "aso-suggestions" | "aso-audit" | "aso-cro";
 
 export interface AppState {
   activeTool: ActiveTool;
@@ -74,10 +101,16 @@ export interface AppState {
   selectedCountry: string;
   adFormat: AdFormat;
   keywords: Keyword[];
+  keywordSuggestions: KeywordSuggestion[];
+  asoAudit: AsoAuditResult | null;
+  croSuggestions: CroSuggestion[];
   ads: Record<AdNetwork, AdCreative[]>;
   loading: {
     search: boolean;
     keywords: boolean;
+    keywordSuggestions: boolean;
+    asoAudit: boolean;
+    croSuggestions: boolean;
     ads: Record<AdNetwork, boolean>;
   };
 }

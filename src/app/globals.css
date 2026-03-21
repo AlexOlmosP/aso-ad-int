@@ -2,39 +2,49 @@
 
 @theme inline {
   --color-primary: #ec5b13;
-  --color-background-light: #f8f6f6;
-  --color-background-dark: #1a1a1a;
+  --color-background-light: #F9FAFB;
+  --color-background-dark: #18181B;
   --color-nav-dark: #0f172a;
   --color-accent-blue: #3b82f6;
 }
 
-/* ─── Design Tokens ─── */
+/* ─── Design Tokens (stitch-design-taste) ─── */
 :root {
   --glass-bg: rgba(255, 255, 255, 0.65);
-  --glass-border: rgba(0, 0, 0, 0.06);
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.04);
-  --glow-primary: rgba(236, 91, 19, 0.2);
-  --glow-blue: rgba(59, 130, 246, 0.2);
-  --glow-green: rgba(34, 197, 94, 0.2);
+  --glass-border: rgba(226, 232, 240, 0.5);
+  --card-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.05);
+  --card-shadow-hover: 0 25px 50px -12px rgba(0, 0, 0, 0.08);
 }
 
-.dark {
-  --glass-bg: rgba(15, 23, 42, 0.65);
-  --glass-border: rgba(255, 255, 255, 0.06);
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.2);
+@media (prefers-color-scheme: dark) {
+  :root {
+    --glass-bg: rgba(15, 23, 42, 0.65);
+    --glass-border: rgba(255, 255, 255, 0.06);
+    --card-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.25);
+    --card-shadow-hover: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+  }
 }
 
+/* ─── Font: Geist (stitch-design-taste approved) ─── */
 @font-face {
-  font-family: "Public Sans";
+  font-family: "Geist";
   font-style: normal;
-  font-weight: 300 700;
+  font-weight: 100 900;
   font-display: swap;
-  src: url("https://fonts.gstatic.com/s/publicsans/v15/ijwGs572Xtc6ZYQws9YVwllKVG8qX1oyOymuFpmJygcofjVmNQ.woff2")
+  src: url("https://cdn.jsdelivr.net/npm/geist@1.4.1/dist/fonts/geist-sans/Geist-Variable.woff2")
+    format("woff2");
+}
+@font-face {
+  font-family: "Geist Mono";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("https://cdn.jsdelivr.net/npm/geist@1.4.1/dist/fonts/geist-mono/GeistMono-Variable.woff2")
     format("woff2");
 }
 
 body {
-  font-family: "Public Sans", system-ui, sans-serif;
+  font-family: "Geist", system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -43,16 +53,16 @@ body {
 .glass {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
+  box-shadow: var(--card-shadow);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }
 
 .glass-hover {
-  transition: all 0.2s ease;
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
 }
 .glass-hover:hover {
-  box-shadow: var(--glass-shadow), 0 0 0 1px var(--glass-border);
+  box-shadow: var(--card-shadow-hover);
   transform: translateY(-1px);
 }
 
@@ -62,70 +72,54 @@ body {
   -webkit-backdrop-filter: blur(12px);
 }
 
-/* ─── Premium Button ─── */
+/* ─── Premium Button (no outer glow on hover — stitch rule) ─── */
 .premium-btn {
   background: linear-gradient(180deg, #ec5b13 0%, #d44d0b 100%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    0 2px 4px rgba(0, 0, 0, 0.1),
-    0 0 0 0 rgba(236, 91, 19, 0);
-  transition: box-shadow 0.2s ease, transform 0.1s ease;
+    0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.15s ease, transform 0.1s ease;
 }
 .premium-btn:hover {
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    0 4px 12px rgba(236, 91, 19, 0.3),
-    0 0 20px rgba(236, 91, 19, 0.15);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 4px 8px rgba(0, 0, 0, 0.15);
 }
 .premium-btn:active {
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
   transform: translateY(1px);
 }
 
-/* ─── Shadows ─── */
+/* ─── Shadows (diffused whisper — stitch spec) ─── */
 .card-shadow {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04),
-    0 4px 12px rgba(0, 0, 0, 0.06),
-    0 8px 24px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.05);
 }
 
 .card-shadow-hover {
   transition: box-shadow 0.25s ease, transform 0.25s ease;
 }
 .card-shadow-hover:hover {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06),
-    0 8px 24px rgba(0, 0, 0, 0.1),
-    0 16px 48px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.08);
   transform: translateY(-2px);
 }
 
-/* ─── Glow Utilities ─── */
-.glow-primary {
-  box-shadow: 0 0 20px var(--glow-primary), 0 0 60px rgba(236, 91, 19, 0.08);
-}
-.glow-blue {
-  box-shadow: 0 0 20px var(--glow-blue);
-}
-.glow-green {
-  box-shadow: 0 0 20px var(--glow-green);
-}
-
-/* ─── Typography ─── */
+/* ─── Typography (Geist, track-tight headings) ─── */
 .heading-xl {
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: -0.025em;
   line-height: 1.1;
 }
 
 .heading-lg {
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
   line-height: 1.15;
 }
 
 .mono {
+  font-family: "Geist Mono", ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
 }
 
-/* ─── Shimmer Skeleton ─── */
+/* ─── Shimmer Skeleton (replaces circular spinners) ─── */
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
@@ -140,6 +134,7 @@ body {
   );
   background-size: 200% 100%;
   animation: shimmer 2s ease-in-out infinite;
+  border-radius: inherit;
 }
 
 .dark .skeleton-shimmer {
@@ -152,7 +147,24 @@ body {
   background-size: 200% 100%;
 }
 
-/* ─── Ambient Grain ─── */
+/* ─── Perpetual Micro-Interactions (stitch motion spec) ─── */
+@keyframes status-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.status-pulse {
+  animation: status-pulse 2s ease-in-out infinite;
+}
+
+@keyframes float-subtle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+.float-subtle {
+  animation: float-subtle 3s ease-in-out infinite;
+}
+
+/* ─── Ambient Grain (fixed pseudo-element, pointer-events-none) ─── */
 .grain::after {
   content: "";
   position: fixed;
@@ -163,19 +175,19 @@ body {
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* ─── Fade Gradient for Scroll Edges ─── */
+/* ─── Scroll Fade ─── */
 .scroll-fade-right {
   mask-image: linear-gradient(to right, black 90%, transparent 100%);
   -webkit-mask-image: linear-gradient(to right, black 90%, transparent 100%);
 }
 
-/* ─── Focus Ring ─── */
+/* ─── Focus Ring (accent color, 2px offset — stitch spec) ─── */
 .focus-glow:focus {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(236, 91, 19, 0.3), 0 0 12px rgba(236, 91, 19, 0.15);
+  box-shadow: 0 0 0 2px rgba(236, 91, 19, 0.3);
 }
 
-/* ─── Scrollbar Styling ─── */
+/* ─── Scrollbar ─── */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;

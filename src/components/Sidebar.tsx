@@ -4,6 +4,14 @@ import { useState, useRef, useEffect } from "react";
 import gsap from "gsap";
 import { useStore } from "@/lib/store";
 import { AppSearchModal } from "./AppSearchModal";
+import type { ActiveTool } from "@/lib/types";
+
+const ASO_ITEMS: { id: ActiveTool; label: string }[] = [
+  { id: "aso-keywords", label: "Tracked Keywords" },
+  { id: "aso-suggestions", label: "Keyword Suggestions" },
+  { id: "aso-audit", label: "ASO Audit" },
+  { id: "aso-cro", label: "CR Optimization" },
+];
 
 export function Sidebar() {
   const {
@@ -15,18 +23,12 @@ export function Sidebar() {
     removeTrackedApp,
   } = useStore();
   const [searchOpen, setSearchOpen] = useState(false);
-  const pillRef = useRef<HTMLDivElement>(null);
+  const [asoOpen, setAsoOpen] = useState(activeTool !== "ad-intel");
   const navRef = useRef<HTMLElement>(null);
 
-  // Animated sliding pill for tool switcher
+  // Open ASO folder when an ASO tool is selected
   useEffect(() => {
-    if (!pillRef.current) return;
-    const offset = activeTool === "ad-intel" ? 0 : 50;
-    gsap.to(pillRef.current, {
-      left: `${offset}%`,
-      duration: 0.3,
-      ease: "power2.out",
-    });
+    if (activeTool !== "ad-intel") setAsoOpen(true);
   }, [activeTool]);
 
   // Staggered entrance for tracked apps
@@ -38,6 +40,8 @@ export function Sidebar() {
       { opacity: 1, x: 0, duration: 0.35, stagger: 0.04, ease: "power2.out" }
     );
   }, [trackedApps.length]);
+
+  const isAsoTool = activeTool !== "ad-intel";
 
   return (
     <>
@@ -57,32 +61,75 @@ export function Sidebar() {
           </div>
         </div>
 
-        {/* Tool switcher with animated pill */}
-        <div className="px-4 mb-6">
-          <div className="relative flex p-1 bg-white/[0.06] rounded-lg">
-            {/* Sliding indicator */}
-            <div
-              ref={pillRef}
-              className="absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-md premium-btn pointer-events-none"
-              style={{ left: activeTool === "ad-intel" ? "4px" : "50%" }}
-            />
+        {/* Navigation */}
+        <div className="px-4 mb-4 space-y-1">
+          {/* Ad Intelligence section */}
+          <button
+            onClick={() => setActiveTool("ad-intel")}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-all ${
+              activeTool === "ad-intel"
+                ? "bg-white/[0.08] text-white shadow-[inset_3px_0_0_#ec5b13]"
+                : "text-slate-400 hover:bg-white/[0.04] hover:text-white"
+            }`}
+          >
+            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            <span className="text-xs font-semibold">Ad Intelligence</span>
+          </button>
+
+          {/* ASO Research section */}
+          <div>
             <button
-              onClick={() => setActiveTool("ad-intel")}
-              className={`relative z-10 flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors ${
-                activeTool === "ad-intel" ? "text-white" : "text-slate-400 hover:text-white"
+              onClick={() => {
+                setAsoOpen(!asoOpen);
+                if (!isAsoTool) setActiveTool("aso-keywords");
+              }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-all ${
+                isAsoTool
+                  ? "text-white"
+                  : "text-slate-400 hover:bg-white/[0.04] hover:text-white"
               }`}
             >
-              Ad Intel
+              <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <span className="text-xs font-semibold flex-1">ASO Research</span>
+              <svg
+                className={`w-3 h-3 text-slate-500 transition-transform duration-200 ${asoOpen ? "rotate-90" : ""}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2.5}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
             </button>
-            <button
-              onClick={() => setActiveTool("aso")}
-              className={`relative z-10 flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors ${
-                activeTool === "aso" ? "text-white" : "text-slate-400 hover:text-white"
-              }`}
-            >
-              ASO Research
-            </button>
+
+            {/* ASO sub-items */}
+            {asoOpen && (
+              <div className="ml-4 mt-0.5 space-y-0.5 border-l border-white/[0.06] pl-3">
+                {ASO_ITEMS.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTool(item.id)}
+                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left transition-all ${
+                      activeTool === item.id
+                        ? "bg-white/[0.08] text-white shadow-[inset_2px_0_0_#ec5b13]"
+                        : "text-slate-500 hover:bg-white/[0.04] hover:text-slate-300"
+                    }`}
+                  >
+                    <span className="text-[11px] font-medium">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
+        </div>
+
+        {/* Divider */}
+        <div className="px-4 mb-3">
+          <div className="h-px bg-white/[0.06]" />
         </div>
 
         {/* Tracked apps list */}

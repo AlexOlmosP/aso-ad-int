@@ -35,7 +35,7 @@ export function KeywordTable() {
   }, [keywords.length]);
 
   return (
-    <section className="bg-white/80 dark:bg-slate-900/80 rounded-2xl border border-slate-200/60 dark:border-white/[0.06] card-shadow overflow-hidden flex flex-col backdrop-blur-sm">
+    <section className="bg-white/80 dark:bg-slate-900/80 rounded-[2rem] border border-slate-200/60 dark:border-white/[0.06] card-shadow overflow-hidden flex flex-col backdrop-blur-sm">
       <div className="p-6 border-b border-slate-100/80 dark:border-white/[0.04]">
         <div className="flex justify-between items-center mb-4">
           <h3 className="heading-lg text-lg text-slate-900 dark:text-white">

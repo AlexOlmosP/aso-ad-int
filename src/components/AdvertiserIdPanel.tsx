@@ -158,7 +158,7 @@ function AdvertiserModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md" onClick={onClose}>
       <div
         ref={modalRef}
-        className="w-full max-w-lg bg-white/95 dark:bg-slate-900/95 rounded-2xl shadow-2xl border border-slate-200/60 dark:border-white/[0.06] p-6 backdrop-blur-xl"
+        className="w-full max-w-lg bg-white/95 dark:bg-slate-900/95 rounded-[2rem] shadow-2xl border border-slate-200/60 dark:border-white/[0.06] p-6 backdrop-blur-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="text-lg heading-lg text-slate-900 dark:text-white mb-1">

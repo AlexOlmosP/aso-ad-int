@@ -22,24 +22,37 @@ function AdCard({ ad }: { ad: AdCreative }) {
     return n.toString();
   };
 
+  // Google ads with previewUrl: render live via /api/ads/embed route
+  const hasGooglePreview = ad.network === "google" && ad.previewUrl;
+  const embedSrc = hasGooglePreview
+    ? `/api/ads/embed?url=${encodeURIComponent(ad.previewUrl!)}`
+    : "";
+
   return (
     <div className="ad-card min-w-[280px] max-w-[280px] bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/60 dark:border-white/[0.06] overflow-hidden card-shadow card-shadow-hover flex-shrink-0">
       {/* Image / Video / Preview */}
       <div className="h-48 bg-slate-50 dark:bg-white/[0.03] relative overflow-hidden">
-        {ad.videoUrl ? (
+        {hasGooglePreview ? (
+          <iframe
+            src={embedSrc}
+            className="w-full h-full border-0"
+            title={ad.title ?? "Google Ad Preview"}
+            loading="lazy"
+          />
+        ) : ad.videoUrl ? (
           <video
             src={ad.videoUrl}
             poster={ad.imageUrl || undefined}
             controls
             muted
             playsInline
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain bg-slate-900"
           />
         ) : ad.imageUrl ? (
           <img
             src={ad.imageUrl}
             alt={ad.title ?? "Ad creative"}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain"
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = "none";
             }}
@@ -187,7 +200,7 @@ function NetworkSection({ network }: { network: AdNetwork }) {
           ))}
         </div>
       ) : networkAds.length === 0 ? (
-        <div className="py-8 text-center bg-white/60 dark:bg-white/[0.02] rounded-2xl border border-slate-200/60 dark:border-white/[0.04]">
+        <div className="py-8 text-center bg-white/60 dark:bg-white/[0.02] rounded-[2rem] border border-slate-200/60 dark:border-white/[0.04]">
           <p className="text-sm text-slate-400">
             No ads found. Click &quot;Fetch Ads&quot; above to search.
           </p>
