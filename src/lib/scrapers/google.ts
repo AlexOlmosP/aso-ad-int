@@ -281,6 +281,253 @@ function mapGoogleCreative(creative: any, advertiserId: string, index: number): 
   };
 }
 
+// ─── Search Google Ads Transparency Center for advertiser candidates ───
+
+export interface GoogleAdvertiserCandidate {
+  name: string;
+  arId: string;
+}
+
+export async function searchGoogleAdvertisers(query: string): Promise<GoogleAdvertiserCandidate[]> {
+  console.error(`[Google] Searching advertisers for: "${query}"`);
+
+  let context: BrowserContext | null = null;
+  try {
+    const { context: ctx, page } = await createPage();
+    context = ctx;
+
+    const advertisers: GoogleAdvertiserCandidate[] = [];
+
+    // Intercept ALL RPC responses to catch the autocomplete/search dropdown data
+    page.on("response", async (response) => {
+      try {
+        const resUrl = response.url();
+        if (!resUrl.includes("adstransparency.google.com")) return;
+        // Capture any RPC call (Google uses various endpoints for search)
+        if (!resUrl.includes("rpc") && !resUrl.includes("Search") && !resUrl.includes("Autocomplete")) return;
+
+        let text: string;
+        try { text = await response.text(); } catch { return; }
+        const cleanText = text.replace(/^\)\]\}'\n?/, "");
+        try {
+          const data = JSON.parse(cleanText);
+          extractAdvertisersFromRPCResponse(data, advertisers);
+        } catch { /* skip non-JSON */ }
+      } catch { /* skip */ }
+    });
+
+    // Navigate to the transparency center
+    await page.goto("https://adstransparency.google.com/?region=anywhere", {
+      waitUntil: "domcontentloaded",
+      timeout: 30000,
+    });
+    await page.waitForTimeout(3000);
+
+    // Find the search input and type the query
+    // Google Ads Transparency uses a search input — try multiple selectors
+    const searchSelectors = [
+      'input[type="search"]',
+      'input[aria-label*="search" i]',
+      'input[aria-label*="Search" i]',
+      'input[placeholder*="search" i]',
+      'input[placeholder*="advertiser" i]',
+      'input[role="searchbox"]',
+      'input[role="combobox"]',
+      'search-box input',
+      '.search-input input',
+      'input',
+    ];
+
+    let typed = false;
+    for (const selector of searchSelectors) {
+      try {
+        const input = await page.$(selector);
+        if (input && await input.isVisible()) {
+          await input.click();
+          await page.waitForTimeout(500);
+          await input.fill(query);
+          await page.waitForTimeout(1000);
+          // Also try pressing keys to trigger autocomplete
+          await input.press("Space");
+          await page.waitForTimeout(500);
+          await input.press("Backspace");
+          typed = true;
+          console.error(`[Google] Typed query using selector: ${selector}`);
+          break;
+        }
+      } catch { /* try next selector */ }
+    }
+
+    if (!typed) {
+      // Last resort: try keyboard typing after clicking on the page
+      console.error("[Google] No search input found, trying keyboard approach");
+      await page.keyboard.type(query, { delay: 50 });
+    }
+
+    // Wait for dropdown/autocomplete results to load
+    await page.waitForTimeout(4000);
+
+    // If RPC interception found results, return them
+    if (advertisers.length > 0) {
+      console.error(`[Google] RPC interception found ${advertisers.length} advertisers`);
+      return advertisers;
+    }
+
+    // Fallback: Try to extract from DOM dropdown elements
+    console.error("[Google] No RPC results, trying DOM extraction...");
+    const domResults = await page.evaluate(() => {
+      const results: { name: string; arId: string }[] = [];
+
+      // Look for dropdown items / suggestion items / links containing AR IDs
+      const allLinks = document.querySelectorAll('a[href*="/advertiser/AR"]');
+      for (const link of allLinks) {
+        const href = link.getAttribute("href") || "";
+        const arMatch = href.match(/(AR\d{18,22})/);
+        if (arMatch) {
+          const name = link.textContent?.trim() || "";
+          if (name && !results.some(r => r.arId === arMatch[1])) {
+            results.push({ name, arId: arMatch[1] });
+          }
+        }
+      }
+
+      // Also search for any element containing AR IDs
+      if (results.length === 0) {
+        const allElements = document.querySelectorAll('[class*="result"], [class*="item"], [class*="suggestion"], [role="option"], [role="listbox"] > *, li');
+        for (const el of allElements) {
+          const text = el.textContent || "";
+          const arMatch = text.match(/(AR\d{18,22})/);
+          // Also check for links inside the element
+          const innerLink = el.querySelector('a[href*="/advertiser/"]');
+          const innerHref = innerLink?.getAttribute("href") || "";
+          const innerArMatch = innerHref.match(/(AR\d{18,22})/);
+
+          if (arMatch || innerArMatch) {
+            const arId = arMatch?.[1] || innerArMatch?.[1] || "";
+            // Get the display name (first meaningful text)
+            const nameEl = el.querySelector('[class*="name"], [class*="title"], span, div');
+            const name = nameEl?.textContent?.trim() || el.textContent?.trim().split("\n")[0]?.trim() || "";
+            if (name && arId && !results.some(r => r.arId === arId)) {
+              results.push({ name: name.substring(0, 100), arId });
+            }
+          }
+        }
+      }
+
+      return results;
+    });
+
+    for (const r of domResults) {
+      if (!advertisers.some(a => a.arId === r.arId)) {
+        advertisers.push(r);
+      }
+    }
+
+    // If still no results, try clicking the first dropdown option and extracting from URL
+    if (advertisers.length === 0) {
+      console.error("[Google] Trying to click first dropdown option...");
+      try {
+        // Try clicking on suggestion items
+        const clickSelectors = [
+          '[role="option"]',
+          '[role="listbox"] > *:first-child',
+          '[class*="suggestion"]:first-child',
+          '[class*="result"]:first-child',
+        ];
+        for (const sel of clickSelectors) {
+          const el = await page.$(sel);
+          if (el && await el.isVisible()) {
+            const optionText = await el.textContent();
+            await el.click();
+            await page.waitForTimeout(3000);
+            // Check if URL now contains an AR ID
+            const currentUrl = page.url();
+            const urlMatch = currentUrl.match(/(AR\d{18,22})/);
+            if (urlMatch) {
+              advertisers.push({
+                name: optionText?.trim() || query,
+                arId: urlMatch[1],
+              });
+            }
+            break;
+          }
+        }
+      } catch { /* skip */ }
+    }
+
+    console.error(`[Google] Total found: ${advertisers.length} advertisers for "${query}"`);
+    return advertisers;
+  } catch (err) {
+    console.error("[Google] Advertiser search error:", err);
+    return [];
+  } finally {
+    if (context) await context.close().catch(() => {});
+  }
+}
+
+// Extract advertiser AR IDs from Google's RPC response data
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function extractAdvertisersFromRPCResponse(data: any, results: GoogleAdvertiserCandidate[]): void {
+  if (!data || typeof data !== "object") return;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function search(obj: any, depth: number): void {
+    if (depth > 10 || !obj) return;
+    if (typeof obj !== "object") return;
+
+    // Look for AR ID strings anywhere in the object
+    if (!Array.isArray(obj)) {
+      const values = Object.values(obj);
+      for (const val of values) {
+        if (typeof val === "string" && /^AR\d{18,22}$/.test(val)) {
+          const name = findAdvertiserName(obj);
+          if (name && !results.some(r => r.arId === val)) {
+            results.push({ name, arId: val });
+          }
+        }
+      }
+    }
+
+    if (Array.isArray(obj)) {
+      for (const item of obj) search(item, depth + 1);
+    } else {
+      for (const val of Object.values(obj)) {
+        if (val && typeof val === "object") search(val, depth + 1);
+      }
+    }
+  }
+
+  search(data, 0);
+}
+
+// Find an advertiser name near an AR ID in a Google RPC object
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function findAdvertiserName(obj: any): string {
+  for (const val of Object.values(obj)) {
+    if (typeof val === "string" &&
+        val.length >= 2 && val.length <= 100 &&
+        !val.startsWith("AR") &&
+        !val.startsWith("http") &&
+        !val.startsWith("CR") &&
+        !/^\d+$/.test(val)) {
+      return val;
+    }
+    if (typeof val === "object" && val && !Array.isArray(val)) {
+      for (const subVal of Object.values(val as Record<string, unknown>)) {
+        if (typeof subVal === "string" &&
+            subVal.length >= 2 && subVal.length <= 100 &&
+            !subVal.startsWith("AR") &&
+            !subVal.startsWith("http") &&
+            !subVal.startsWith("CR") &&
+            !/^\d+$/.test(subVal)) {
+          return subVal;
+        }
+      }
+    }
+  }
+  return "";
+}
+
 function parseTimestamp(val: unknown): string {
   if (!val) return "";
   const num = typeof val === "string" ? parseInt(val, 10) : (typeof val === "number" ? val : 0);

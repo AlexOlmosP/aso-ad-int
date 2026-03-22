@@ -227,7 +227,7 @@ async function scrapeMetaAdsViaPlaywright(params: MetaScrapeParams): Promise<AdC
       } catch { /* skip */ }
     }
 
-    await page.waitForTimeout(6000);
+    await page.waitForTimeout(8000);
 
     const currentUrl = page.url();
     if (currentUrl.includes("/login") || currentUrl.includes("checkpoint")) {
@@ -235,8 +235,8 @@ async function scrapeMetaAdsViaPlaywright(params: MetaScrapeParams): Promise<AdC
       return [];
     }
 
-    // Scroll to load more ads
-    for (let i = 0; i < 3 && collectedAds.length < limit; i++) {
+    // Scroll to load more ads — scroll more aggressively to ensure we get enough
+    for (let i = 0; i < 6 && collectedAds.length < limit; i++) {
       await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
       await page.waitForTimeout(3000);
     }
@@ -252,7 +252,7 @@ async function scrapeMetaAdsViaPlaywright(params: MetaScrapeParams): Promise<AdC
         `&view_all_page_id=${metaPageId}`;
       await page.goto(fallbackUrl, { waitUntil: "domcontentloaded", timeout: 45000 });
       await page.waitForTimeout(8000);
-      for (let i = 0; i < 2 && collectedAds.length < limit; i++) {
+      for (let i = 0; i < 5 && collectedAds.length < limit; i++) {
         await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
         await page.waitForTimeout(3000);
       }
@@ -359,6 +359,119 @@ function formatDate(val: unknown): string {
   if (isNaN(num)) return "";
   const ms = num < 10_000_000_000 ? num * 1000 : num;
   try { return new Date(ms).toISOString().split("T")[0]; } catch { return ""; }
+}
+
+// ─── Search Meta Ad Library for advertiser candidates ───
+
+export interface MetaAdvertiserCandidate {
+  name: string;
+  pageId: string;
+}
+
+export async function searchMetaAdvertisers(query: string): Promise<MetaAdvertiserCandidate[]> {
+  let context: BrowserContext | null = null;
+  const url =
+    `https://www.facebook.com/ads/library/?active_status=all&ad_type=all` +
+    `&country=ALL&q=${encodeURIComponent(query)}&search_type=keyword_unordered`;
+
+  console.error(`[Meta] Searching advertisers for: "${query}"`);
+
+  try {
+    const { context: ctx, page } = await createPage();
+    context = ctx;
+
+    const advertisers = new Map<string, string>(); // pageId -> pageName
+
+    page.on("response", async (response) => {
+      try {
+        const contentType = response.headers()["content-type"] || "";
+        if (!contentType.includes("json") && !contentType.includes("text/html") && !contentType.includes("text/plain")) return;
+        const resUrl = response.url();
+        if (resUrl.endsWith(".js") || resUrl.endsWith(".css") || resUrl.includes("/static/")) return;
+
+        let text: string;
+        try { text = await response.text(); } catch { return; }
+
+        // Look for page_id/page_name pairs in GraphQL responses
+        if (!text.includes("page_id") && !text.includes("pageID")) return;
+
+        const jsonStrings = text.split("\n").filter((line) => line.trim().startsWith("{"));
+        for (const jsonStr of jsonStrings) {
+          try {
+            const data = JSON.parse(jsonStr);
+            extractAdvertisersFromGraphQL(data, advertisers);
+          } catch { /* skip */ }
+        }
+      } catch { /* skip */ }
+    });
+
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 45000 });
+    await page.waitForTimeout(3000);
+
+    // Dismiss cookie/login dialogs
+    for (const selector of [
+      'button[data-cookiebanner="accept_button"]',
+      'button[title="Allow all cookies"]',
+      'button[title="Accept All"]',
+      '[aria-label="Allow all cookies"]',
+      '[aria-label="Close"]',
+    ]) {
+      try {
+        const btn = await page.$(selector);
+        if (btn && await btn.isVisible()) {
+          await btn.click();
+          await page.waitForTimeout(1500);
+          break;
+        }
+      } catch { /* skip */ }
+    }
+
+    await page.waitForTimeout(6000);
+
+    // Scroll to load more results
+    for (let i = 0; i < 2; i++) {
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      await page.waitForTimeout(2000);
+    }
+
+    console.error(`[Meta] Found ${advertisers.size} unique advertisers for "${query}"`);
+
+    return Array.from(advertisers.entries()).map(([pageId, name]) => ({
+      name,
+      pageId,
+    }));
+  } catch (err) {
+    console.error("[Meta] Advertiser search error:", err);
+    return [];
+  } finally {
+    if (context) await context.close().catch(() => {});
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function extractAdvertisersFromGraphQL(obj: any, advertisers: Map<string, string>): void {
+  if (!obj || typeof obj !== "object") return;
+
+  // Look for objects with page_id + page_name
+  if (obj.page_id && obj.page_name && typeof obj.page_id === "string") {
+    advertisers.set(obj.page_id, obj.page_name);
+  }
+  // Also check camelCase variants
+  if (obj.pageID && obj.pageName && typeof obj.pageID === "string") {
+    advertisers.set(obj.pageID, obj.pageName);
+  }
+  // Check for collated_results pattern
+  if (obj.collated_results) {
+    extractAdvertisersFromGraphQL(obj.collated_results, advertisers);
+  }
+
+  if (Array.isArray(obj)) {
+    for (const item of obj) extractAdvertisersFromGraphQL(item, advertisers);
+  } else {
+    for (const value of Object.values(obj)) {
+      if (value && typeof value === "object") extractAdvertisersFromGraphQL(value, advertisers);
+    }
+  }
 }
 
 function parsePlaywrightImpressions(val: string | number | undefined): number {

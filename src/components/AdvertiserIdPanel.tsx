@@ -5,6 +5,12 @@ import gsap from "gsap";
 import { useStore } from "@/lib/store";
 import type { AdNetwork } from "@/lib/types";
 
+interface AdvertiserCandidate {
+  name: string;
+  id: string;
+  confidence: "high" | "medium" | "low";
+}
+
 const ID_CONFIG: Record<
   AdNetwork,
   {
@@ -53,12 +59,23 @@ const ID_CONFIG: Record<
   },
 };
 
+const CONFIDENCE_STYLES = {
+  high: "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800/30",
+  medium: "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/30",
+  low: "text-slate-500 bg-slate-50 dark:bg-white/[0.04] border-slate-200 dark:border-white/[0.06]",
+};
+
 export function AdvertiserIdPanel() {
   const { selectedAppId, trackedApps, updateAdvertiserIds } = useStore();
   const [open, setOpen] = useState(false);
   const [values, setValues] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const modalRef = useRef<HTMLDivElement>(null);
+  const [searching, setSearching] = useState(false);
+  const [candidates, setCandidates] = useState<{
+    meta: AdvertiserCandidate[];
+    google: AdvertiserCandidate[];
+    tiktok: AdvertiserCandidate[];
+  } | null>(null);
 
   const app = trackedApps.find((a) => a.id === selectedAppId);
   if (!app) return null;
@@ -73,6 +90,7 @@ export function AdvertiserIdPanel() {
       tiktokBizId: ids.tiktokBizId ?? "",
     });
     setErrors({});
+    setCandidates(null);
     setOpen(true);
   }
 
@@ -99,6 +117,39 @@ export function AdvertiserIdPanel() {
     setOpen(false);
   }
 
+  async function handleAutoDetect() {
+    setSearching(true);
+    setCandidates(null);
+    try {
+      const res = await fetch("/api/ads/find-advertisers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          appName: app!.name,
+          developer: app!.developer,
+        }),
+      });
+      if (!res.ok) throw new Error("Search failed");
+      const data = await res.json();
+      setCandidates(data);
+
+      // Auto-fill high-confidence matches if fields are empty
+      if (data.meta?.[0]?.confidence === "high" && !values.metaPageId) {
+        setValues(prev => ({ ...prev, metaPageId: data.meta[0].id }));
+      }
+      if (data.google?.[0]?.confidence === "high" && !values.googleAdId) {
+        setValues(prev => ({ ...prev, googleAdId: data.google[0].id }));
+      }
+      if (data.tiktok?.[0]?.confidence === "high" && !values.tiktokBizId) {
+        setValues(prev => ({ ...prev, tiktokBizId: data.tiktok[0].id }));
+      }
+    } catch (err) {
+      console.error("Auto-detect failed:", err);
+    } finally {
+      setSearching(false);
+    }
+  }
+
   if (!open) {
     return (
       <button
@@ -123,6 +174,9 @@ export function AdvertiserIdPanel() {
       values={values}
       setValues={setValues}
       errors={errors}
+      candidates={candidates}
+      searching={searching}
+      onAutoDetect={handleAutoDetect}
       onSave={handleSave}
       onClose={() => setOpen(false)}
     />
@@ -134,13 +188,19 @@ function AdvertiserModal({
   values,
   setValues,
   errors,
+  candidates,
+  searching,
+  onAutoDetect,
   onSave,
   onClose,
 }: {
-  app: { name: string };
+  app: { name: string; developer: string };
   values: Record<string, string>;
   setValues: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   errors: Record<string, string>;
+  candidates: { meta: AdvertiserCandidate[]; google: AdvertiserCandidate[]; tiktok: AdvertiserCandidate[] } | null;
+  searching: boolean;
+  onAutoDetect: () => void;
   onSave: () => void;
   onClose: () => void;
 }) {
@@ -154,23 +214,45 @@ function AdvertiserModal({
     );
   }, []);
 
+  const networkCandidateKey: Record<AdNetwork, "meta" | "google" | "tiktok"> = {
+    meta: "meta",
+    google: "google",
+    tiktok: "tiktok",
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md" onClick={onClose}>
       <div
         ref={modalRef}
-        className="w-full max-w-lg bg-white/95 dark:bg-slate-900/95 rounded-[2rem] shadow-2xl border border-slate-200/60 dark:border-white/[0.06] p-6 backdrop-blur-xl"
+        className="w-full max-w-lg bg-white/95 dark:bg-slate-900/95 rounded-[2rem] shadow-2xl border border-slate-200/60 dark:border-white/[0.06] p-6 backdrop-blur-xl max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="text-lg heading-lg text-slate-900 dark:text-white mb-1">
           Advertiser IDs — {app.name}
         </h3>
-        <p className="text-xs text-slate-500 mb-5">
-          Adding IDs greatly improves ad scraping accuracy. Click &quot;Find&quot; to open the ad library and locate the ID.
+        <p className="text-xs text-slate-500 mb-4">
+          Auto-detect searches ad libraries using &quot;{app.name}&quot; and &quot;{app.developer}&quot;.
         </p>
+
+        {/* Auto-detect button */}
+        <button
+          onClick={onAutoDetect}
+          disabled={searching}
+          className="w-full py-2.5 bg-[#ec5b13] text-white text-xs font-bold rounded-xl premium-btn disabled:opacity-50 disabled:cursor-not-allowed transition-all mb-5"
+        >
+          {searching ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="inline-block w-3 h-3 rounded-full border-2 border-white border-t-transparent animate-spin" />
+              Searching ad libraries...
+            </span>
+          ) : "Auto-detect Advertiser IDs"}
+        </button>
 
         <div className="space-y-4">
           {(["meta", "google", "tiktok"] as AdNetwork[]).map((network) => {
             const config = ID_CONFIG[network];
+            const networkCandidates = candidates?.[networkCandidateKey[network]] || [];
+
             return (
               <div key={network}>
                 <div className="flex items-center justify-between mb-1.5">
@@ -191,10 +273,47 @@ function AdvertiserModal({
                     rel="noopener noreferrer"
                     className="text-[10px] font-bold text-[#ec5b13] hover:underline"
                   >
-                    Find ID &rarr;
+                    Manual lookup &rarr;
                   </a>
                 </div>
-                <p className="text-[10px] text-slate-400 mb-1">{config.help}</p>
+
+                {/* Candidate cards */}
+                {searching && (
+                  <div className="h-10 rounded-xl skeleton-shimmer mb-2" />
+                )}
+
+                {!searching && networkCandidates.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {networkCandidates.slice(0, 5).map((candidate) => (
+                      <button
+                        key={candidate.id}
+                        onClick={() =>
+                          setValues((prev) => ({
+                            ...prev,
+                            [config.field]: candidate.id,
+                          }))
+                        }
+                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-left transition-all hover:shadow-sm ${
+                          values[config.field] === candidate.id
+                            ? "ring-2 ring-[#ec5b13] border-[#ec5b13]/30"
+                            : "hover:border-slate-300 dark:hover:border-white/10"
+                        } ${CONFIDENCE_STYLES[candidate.confidence]}`}
+                      >
+                        <span className="text-[10px] font-bold truncate max-w-[140px]">
+                          {candidate.name}
+                        </span>
+                        <span className="text-[9px] opacity-60 font-mono">
+                          {candidate.confidence}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {!searching && candidates && networkCandidates.length === 0 && (
+                  <p className="text-[10px] text-slate-400 mb-2">No matches found — enter manually</p>
+                )}
+
                 <input
                   type="text"
                   value={values[config.field] ?? ""}
