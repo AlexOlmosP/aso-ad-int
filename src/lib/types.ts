@@ -55,6 +55,34 @@ export interface CroSuggestion {
   recommendation: string;
 }
 
+export interface DiscoveredKeyword {
+  term: string;
+  rank: number;
+  estimatedVolume: number;
+  source: "autocomplete" | "competitor" | "category";
+}
+
+export interface RevenueEstimate {
+  monthlyRevenue: { low: number; mid: number; high: number };
+  dailyRevenue: { low: number; mid: number; high: number };
+  confidence: "high" | "medium" | "low";
+  retention: {
+    d1: number;   // 0-1 (e.g. 0.28 = 28%)
+    d7: number;
+    d30: number;
+  };
+  breakdown: {
+    estimatedDownloads: { min: number; max: number };
+    iapPriceRange: string | null;
+    avgIapPrice: number;
+    conversionRate: number;
+    category: string;
+    hasAds: boolean;
+    iapRevenueShare: number;
+    adRevenueShare: number;
+  };
+}
+
 // ── Ad Intelligence types ──────────────────────────────────
 export type AdNetwork = "meta" | "google" | "tiktok";
 
@@ -91,7 +119,7 @@ export interface AppSearchResult {
 }
 
 // ── Store state ────────────────────────────────────────────
-export type ActiveTool = "ad-intel" | "aso-keywords" | "aso-suggestions" | "aso-audit" | "aso-cro";
+export type ActiveTool = "intel-ads" | "intel-revenue" | "intel-retention" | "aso-keywords" | "aso-suggestions" | "aso-audit" | "aso-cro" | "aso-rankings";
 
 export interface AppState {
   activeTool: ActiveTool;

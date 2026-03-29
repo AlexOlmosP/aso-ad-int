@@ -91,7 +91,7 @@ export function Header() {
         )}
 
         {/* Advertiser IDs button (only in Ad Intel mode) */}
-        {app && activeTool === "ad-intel" && <AdvertiserIdPanel />}
+        {app && activeTool === "intel-ads" && <AdvertiserIdPanel />}
 
         {/* Store switcher with animated pill */}
         <div className="relative flex bg-slate-100/80 dark:bg-white/[0.06] p-1 rounded-lg ml-4">
@@ -131,7 +131,7 @@ export function Header() {
 
       <div className="flex items-center gap-3 flex-wrap">
         {/* Ad format selector (only in Ad Intel mode) */}
-        {activeTool === "ad-intel" && (
+        {activeTool === "intel-ads" && (
           <>
             <select
               value={adFormat}

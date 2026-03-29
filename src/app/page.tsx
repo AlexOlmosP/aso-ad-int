@@ -7,9 +7,12 @@ import { Header } from "@/components/Header";
 import { KeywordTable } from "@/components/KeywordTable";
 import { StoreListingView } from "@/components/StoreListingView";
 import { KeywordSuggestions } from "@/components/KeywordSuggestions";
+import { KeywordRankings } from "@/components/KeywordRankings";
 import { AsoAudit } from "@/components/AsoAudit";
 import { CroSuggestions } from "@/components/CroSuggestions";
 import { AdIntelView } from "@/components/AdSection";
+import { RevenueEstimate } from "@/components/RevenueEstimate";
+import { RetentionView } from "@/components/RetentionView";
 import { useStore } from "@/lib/store";
 
 function ViewTransition({ viewKey, children }: { viewKey: string; children: ReactNode }) {
@@ -78,8 +81,12 @@ export default function Home() {
     }
 
     switch (activeTool) {
-      case "ad-intel":
+      case "intel-ads":
         return <AdIntelView />;
+      case "intel-revenue":
+        return <RevenueEstimate />;
+      case "intel-retention":
+        return <RetentionView />;
       case "aso-keywords":
         return (
           <>
@@ -87,6 +94,8 @@ export default function Home() {
             <KeywordTable />
           </>
         );
+      case "aso-rankings":
+        return <KeywordRankings />;
       case "aso-suggestions":
         return <KeywordSuggestions />;
       case "aso-audit":

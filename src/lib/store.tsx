@@ -14,8 +14,10 @@ import type {
   AdvertiserIds,
   Keyword,
   KeywordSuggestion,
+  DiscoveredKeyword,
   AsoAuditResult,
   CroSuggestion,
+  RevenueEstimate,
   AdCreative,
   AdNetwork,
   ActiveTool,
@@ -35,15 +37,19 @@ interface StoreContextValue {
   adDateEnd: string;
   keywords: Keyword[];
   keywordSuggestions: KeywordSuggestion[];
+  discoveredKeywords: DiscoveredKeyword[];
   asoAudit: AsoAuditResult | null;
   croSuggestions: CroSuggestion[];
+  revenueEstimate: RevenueEstimate | null;
   ads: Record<AdNetwork, AdCreative[]>;
   loading: {
     search: boolean;
     keywords: boolean;
     keywordSuggestions: boolean;
+    discoveredKeywords: boolean;
     asoAudit: boolean;
     croSuggestions: boolean;
+    revenueEstimate: boolean;
     ads: Record<AdNetwork, boolean>;
   };
 
@@ -65,14 +71,16 @@ interface StoreContextValue {
   fetchAllAds: () => Promise<void>;
   searchApps: (query: string) => Promise<AppSearchResult[]>;
   fetchKeywordSuggestions: () => Promise<void>;
+  fetchDiscoveredKeywords: () => Promise<void>;
   fetchAsoAudit: () => Promise<void>;
   fetchCroSuggestions: () => Promise<void>;
+  fetchRevenueEstimate: () => Promise<void>;
 }
 
 const StoreContext = createContext<StoreContextValue | null>(null);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [activeTool, setActiveTool] = useState<ActiveTool>("ad-intel");
+  const [activeTool, setActiveTool] = useState<ActiveTool>("intel-ads");
   const [trackedApps, setTrackedApps] = useState<TrackedApp[]>([]);
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
   const [selectedStore, setSelectedStore] = useState<"appstore" | "playstore">("appstore");
@@ -82,8 +90,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [adDateEnd, setAdDateEnd] = useState("");
   const [keywords, setKeywords] = useState<Keyword[]>([]);
   const [keywordSuggestions, setKeywordSuggestions] = useState<KeywordSuggestion[]>([]);
+  const [discoveredKeywords, setDiscoveredKeywords] = useState<DiscoveredKeyword[]>([]);
   const [asoAudit, setAsoAudit] = useState<AsoAuditResult | null>(null);
   const [croSuggestions, setCroSuggestions] = useState<CroSuggestion[]>([]);
+  const [revenueEstimate, setRevenueEstimate] = useState<RevenueEstimate | null>(null);
   const [ads, setAds] = useState<Record<AdNetwork, AdCreative[]>>({
     meta: [],
     google: [],
@@ -93,8 +103,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     search: false,
     keywords: false,
     keywordSuggestions: false,
+    discoveredKeywords: false,
     asoAudit: false,
     croSuggestions: false,
+    revenueEstimate: false,
     ads: { meta: false, google: false, tiktok: false },
   });
 
@@ -443,6 +455,57 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, [selectedApp, selectedStore, selectedCountry]);
 
+  const fetchDiscoveredKeywords = useCallback(async () => {
+    if (!selectedApp) return;
+    const appId = selectedStore === "appstore" ? selectedApp.appStoreId : selectedApp.playStoreId;
+    if (!appId) return;
+    setLoading((l) => ({ ...l, discoveredKeywords: true }));
+    try {
+      const res = await fetch("/api/aso/discover-keywords", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          appId,
+          store: selectedStore,
+          country: selectedCountry === "ALL" ? "US" : selectedCountry,
+          appName: selectedApp.name,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to discover keywords");
+      const data = await res.json();
+      setDiscoveredKeywords(data.keywords ?? []);
+    } catch {
+      setDiscoveredKeywords([]);
+    } finally {
+      setLoading((l) => ({ ...l, discoveredKeywords: false }));
+    }
+  }, [selectedApp, selectedStore, selectedCountry]);
+
+  const fetchRevenueEstimate = useCallback(async () => {
+    if (!selectedApp) return;
+    const appId = selectedStore === "appstore" ? selectedApp.appStoreId : selectedApp.playStoreId;
+    if (!appId) return;
+    setLoading((l) => ({ ...l, revenueEstimate: true }));
+    try {
+      const res = await fetch("/api/intel/revenue-estimate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          appId,
+          store: selectedStore,
+          country: selectedCountry === "ALL" ? "US" : selectedCountry,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to estimate revenue");
+      const data = await res.json();
+      setRevenueEstimate(data);
+    } catch {
+      setRevenueEstimate(null);
+    } finally {
+      setLoading((l) => ({ ...l, revenueEstimate: false }));
+    }
+  }, [selectedApp, selectedStore, selectedCountry]);
+
   return (
     <StoreContext.Provider
       value={{
@@ -456,8 +519,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         adDateEnd,
         keywords,
         keywordSuggestions,
+        discoveredKeywords,
         asoAudit,
         croSuggestions,
+        revenueEstimate,
         ads,
         loading,
         setActiveTool,
@@ -477,8 +542,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         fetchAllAds,
         searchApps,
         fetchKeywordSuggestions,
+        fetchDiscoveredKeywords,
         fetchAsoAudit,
         fetchCroSuggestions,
+        fetchRevenueEstimate,
       }}
     >
       {children}

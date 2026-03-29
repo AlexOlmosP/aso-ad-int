@@ -6,12 +6,27 @@ import { useStore } from "@/lib/store";
 import { AppSearchModal } from "./AppSearchModal";
 import type { ActiveTool } from "@/lib/types";
 
+const INTEL_ITEMS: { id: ActiveTool; label: string }[] = [
+  { id: "intel-ads", label: "Ad Intelligence" },
+  { id: "intel-revenue", label: "Revenue Estimates" },
+  { id: "intel-retention", label: "Retention Estimates" },
+];
+
 const ASO_ITEMS: { id: ActiveTool; label: string }[] = [
   { id: "aso-keywords", label: "Tracked Keywords" },
+  { id: "aso-rankings", label: "Keyword Rankings" },
   { id: "aso-suggestions", label: "Keyword Suggestions" },
   { id: "aso-audit", label: "ASO Audit" },
   { id: "aso-cro", label: "CR Optimization" },
 ];
+
+function isIntelTool(tool: ActiveTool): boolean {
+  return tool.startsWith("intel-");
+}
+
+function isAsoTool(tool: ActiveTool): boolean {
+  return tool.startsWith("aso-");
+}
 
 export function Sidebar() {
   const {
@@ -23,12 +38,14 @@ export function Sidebar() {
     removeTrackedApp,
   } = useStore();
   const [searchOpen, setSearchOpen] = useState(false);
-  const [asoOpen, setAsoOpen] = useState(activeTool !== "ad-intel");
+  const [intelOpen, setIntelOpen] = useState(isIntelTool(activeTool));
+  const [asoOpen, setAsoOpen] = useState(isAsoTool(activeTool));
   const navRef = useRef<HTMLElement>(null);
 
-  // Open ASO folder when an ASO tool is selected
+  // Open folder when a tool in it is selected
   useEffect(() => {
-    if (activeTool !== "ad-intel") setAsoOpen(true);
+    if (isIntelTool(activeTool)) setIntelOpen(true);
+    if (isAsoTool(activeTool)) setAsoOpen(true);
   }, [activeTool]);
 
   // Staggered entrance for tracked apps
@@ -40,8 +57,6 @@ export function Sidebar() {
       { opacity: 1, x: 0, duration: 0.35, stagger: 0.04, ease: "power2.out" }
     );
   }, [trackedApps.length]);
-
-  const isAsoTool = activeTool !== "ad-intel";
 
   return (
     <>
@@ -63,30 +78,63 @@ export function Sidebar() {
 
         {/* Navigation */}
         <div className="px-4 mb-4 space-y-1">
-          {/* Ad Intelligence section */}
-          <button
-            onClick={() => setActiveTool("ad-intel")}
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-all ${
-              activeTool === "ad-intel"
-                ? "bg-white/[0.08] text-white shadow-[inset_3px_0_0_#ec5b13]"
-                : "text-slate-400 hover:bg-white/[0.04] hover:text-white"
-            }`}
-          >
-            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-            </svg>
-            <span className="text-xs font-semibold">Ad Intelligence</span>
-          </button>
+          {/* App Intelligence section */}
+          <div>
+            <button
+              onClick={() => {
+                setIntelOpen(!intelOpen);
+                if (!isIntelTool(activeTool)) setActiveTool("intel-ads");
+              }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-all ${
+                isIntelTool(activeTool)
+                  ? "text-white"
+                  : "text-slate-400 hover:bg-white/[0.04] hover:text-white"
+              }`}
+            >
+              <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              <span className="text-xs font-semibold flex-1">App Intelligence</span>
+              <svg
+                className={`w-3 h-3 text-slate-500 transition-transform duration-200 ${intelOpen ? "rotate-90" : ""}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2.5}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+
+            {/* Intel sub-items */}
+            {intelOpen && (
+              <div className="ml-4 mt-0.5 space-y-0.5 border-l border-white/[0.06] pl-3">
+                {INTEL_ITEMS.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTool(item.id)}
+                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left transition-all ${
+                      activeTool === item.id
+                        ? "bg-white/[0.08] text-white shadow-[inset_2px_0_0_#ec5b13]"
+                        : "text-slate-500 hover:bg-white/[0.04] hover:text-slate-300"
+                    }`}
+                  >
+                    <span className="text-[11px] font-medium">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* ASO Research section */}
           <div>
             <button
               onClick={() => {
                 setAsoOpen(!asoOpen);
-                if (!isAsoTool) setActiveTool("aso-keywords");
+                if (!isAsoTool(activeTool)) setActiveTool("aso-keywords");
               }}
               className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-all ${
-                isAsoTool
+                isAsoTool(activeTool)
                   ? "text-white"
                   : "text-slate-400 hover:bg-white/[0.04] hover:text-white"
               }`}
